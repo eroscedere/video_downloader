@@ -24,10 +24,10 @@ document.getElementById("videoUrl").value = ""
 
 }
 
-async function downloadVideo(url){
+function downloadVideo(url){
 
-await fetch(`/download?url=${encodeURIComponent(url)}`)
-
-alert("Download iniciado!")
+const link = document.createElement("a")
+link.href = `/download?url=${encodeURIComponent(url)}`
+link.click()
 
 }
