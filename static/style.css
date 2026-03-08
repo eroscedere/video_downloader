@@ -1,0 +1,46 @@
+body {
+  font-family: Arial;
+  background: #f4f4f4;
+  padding: 40px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.input-area {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+input {
+  width: 400px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+button {
+  padding: 10px 20px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+#videoList {
+  max-width: 700px;
+  margin: auto;
+}
+
+.video-item {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+
+.video-item img {
+  width: 160px;
+  margin-right: 15px;
+}
