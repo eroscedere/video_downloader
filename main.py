@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 import yt_dlp
 import os
 import uuid
+import threading
 
 app = FastAPI()
 
@@ -13,6 +14,8 @@ templates = Jinja2Templates(directory="templates")
 
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+
+progress_dict = {}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -23,11 +26,7 @@ async def home(request: Request):
 @app.get("/info")
 def get_video_info(url: str):
 
-    ydl_opts = {
-        "quiet": True
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL({"quiet": True}) as ydl:
         info = ydl.extract_info(url, download=False)
 
     return {
@@ -37,23 +36,54 @@ def get_video_info(url: str):
     }
 
 
+@app.get("/progress")
+def get_progress(download_id: str):
+    return {"progress": progress_dict.get(download_id, 0)}
+
+
 @app.get("/download")
 def download_video(url: str):
 
-    file_id = str(uuid.uuid4())
-    filepath = f"{DOWNLOAD_FOLDER}/{file_id}.mp4"
+    download_id = str(uuid.uuid4())
+    filepath = f"{DOWNLOAD_FOLDER}/{download_id}.mp4"
 
-    ydl_opts = {
-        "format": "bestvideo+bestaudio/best",
-        "merge_output_format": "mp4",
-        "outtmpl": filepath
-    }
+    progress_dict[download_id] = 0
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+    def hook(d):
+        if d["status"] == "downloading":
+            total = d.get("total_bytes") or d.get("total_bytes_estimate")
+            downloaded = d.get("downloaded_bytes", 0)
+
+            if total:
+                percent = int(downloaded / total * 100)
+                progress_dict[download_id] = percent
+
+        if d["status"] == "finished":
+            progress_dict[download_id] = 100
+
+    def run_download():
+
+        ydl_opts = {
+            "format": "best",
+            "outtmpl": filepath,
+            "progress_hooks": [hook],
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+
+    threading.Thread(target=run_download).start()
+
+    return {"download_id": download_id, "file": f"/file/{download_id}"}
+
+
+@app.get("/file/{download_id}")
+def get_file(download_id: str):
+
+    filepath = f"{DOWNLOAD_FOLDER}/{download_id}.mp4"
 
     return FileResponse(
-        path=filepath,
+        filepath,
         filename="video.mp4",
         media_type="application/octet-stream"
     )
